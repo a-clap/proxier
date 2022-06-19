@@ -23,17 +23,26 @@ func New(buf []byte, logger logger.Logger) *Modifier {
 	return m
 }
 
+func (m *Modifier) Get() []byte {
+	return []byte(strings.Join(m.lines, "\n"))
+}
+
 func (m *Modifier) RemoveLines(pattern string) (linesRemoved int, err error) {
 	r, err := regexp.Compile(pattern)
 	var lm lineMatcher
 	if err != nil {
-		m.log.Infof("Pattern not compiled, trying with exact string")
+		m.log.Infof("Pattern not compiled, trying with exact string %s", pattern)
 		lm = &regexMatcher{r}
 	} else {
 		lm = &stringsMatcher{p: pattern}
 	}
 
 	return m.removeLines(lm)
+}
+
+func (m *Modifier) AppendLines(lines []string) (linesAppended int) {
+	m.lines = append(m.lines, lines...)
+	return len(lines)
 }
 
 func (m *Modifier) removeLines(lm lineMatcher) (linesRemoved int, err error) {
@@ -49,10 +58,6 @@ func (m *Modifier) removeLines(lm lineMatcher) (linesRemoved int, err error) {
 	}
 	linesRemoved = len(removedLines)
 	return
-}
-
-func (m *Modifier) Get() []byte {
-	return []byte(strings.Join(m.lines, "\n"))
 }
 
 type regexMatcher struct {
