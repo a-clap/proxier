@@ -43,7 +43,7 @@ func New(buf []byte) (*Config, error) {
 	if err = json.Unmarshal(jsonMap["settings"], &c.Settings.Settings); err != nil {
 		return nil, err
 	}
-	if err = json.Unmarshal(jsonMap["files"], &c.Files); err != nil {
+	if err = json.Unmarshal(jsonMap["files"], &c.Files.Files); err != nil {
 		return nil, err
 	}
 
@@ -53,20 +53,31 @@ func New(buf []byte) (*Config, error) {
 	return c, nil
 }
 
-func (c *Config) getValues() {
-	for key, value := range c.Settings.Settings {
-		if value, ok := value.(string); ok {
-			c.Settings.values[key] = value
-		}
-	}
-}
-
 func (c *Config) Get(key string) (string, error) {
 	if v, ok := c.Settings.values[key]; ok {
 		return v, nil
 	} else {
 		return "", fmt.Errorf("%s doesn't exist", key)
 	}
+}
+
+func (c *Config) GetFiles() []File {
+	var files []File = nil
+
+	for _, f := range c.Files.Files {
+		singleFile := File{
+			Name: f.Name,
+		}
+		for _, line := range f.Append {
+			singleFile.Append = append(singleFile.Append, c.parseSingleVariable(line))
+		}
+		for _, line := range f.Remove {
+			singleFile.Remove = append(singleFile.Remove, c.parseSingleVariable(line))
+		}
+		files = append(files, singleFile)
+	}
+
+	return files
 }
 
 func (c *Config) parseSingleVariable(value string) (newValue string) {
@@ -104,5 +115,13 @@ func (c *Config) parse() {
 
 	for _, value := range s {
 		c.Settings.values[value[0]] = value[1]
+	}
+}
+
+func (c *Config) getValues() {
+	for key, value := range c.Settings.Settings {
+		if value, ok := value.(string); ok {
+			c.Settings.values[key] = value
+		}
 	}
 }

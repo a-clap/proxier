@@ -1,6 +1,8 @@
-package config
+package config_test
 
 import (
+	"proxier/internal/config"
+	"reflect"
 	"testing"
 )
 
@@ -24,8 +26,7 @@ func TestNew(t *testing.T) {
 					"http_proxy_server": "192.168.0.1",
 					"port": "123"
 				},
-				"files":{
-				}
+				"files":[]
 			}`)},
 			wantErr: false,
 		},
@@ -37,7 +38,7 @@ func TestNew(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := New(tt.args.buf)
+			_, err := config.New(tt.args.buf)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -71,8 +72,7 @@ func TestConfig_Get(t *testing.T) {
 					"http_proxy_server": "192.168.0.1",
 					"port": "123"
 					},
-					"files":{
-					}
+					"files":[]
 				}`),
 				keys: []string{"user", "password", "http_proxy_server", "port", "ports"},
 			},
@@ -93,8 +93,7 @@ func TestConfig_Get(t *testing.T) {
 					"port": "123",
 					"http_proxy": "${user}"
 					},
-				"files":{
-					}
+				"files":[]
 				}`),
 				keys: []string{"http_proxy"},
 			},
@@ -115,8 +114,7 @@ func TestConfig_Get(t *testing.T) {
 					"port": "123",
 					"http_proxy": "${user}123${user}"
 					},
-				"files": {
-					}
+				"files": []
 				}`),
 				keys: []string{"http_proxy"},
 			},
@@ -137,8 +135,7 @@ func TestConfig_Get(t *testing.T) {
 					"port": "123",
 					"http_proxy": "${user}:${password}"
 					},
-				"files":{
-					}
+				"files":[]
 				}`),
 				keys: []string{"http_proxy"},
 			},
@@ -150,7 +147,7 @@ func TestConfig_Get(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, err := New(tt.args.buf)
+			c, err := config.New(tt.args.buf)
 			if err != nil {
 				t.Errorf("Wrong buf = %v, err = %v", string(tt.args.buf), err)
 				return
@@ -164,6 +161,130 @@ func TestConfig_Get(t *testing.T) {
 				if got != tt.wants.value[i] {
 					t.Errorf("Get() got = %v, want %v", got, tt.wants.value[i])
 				}
+			}
+		})
+	}
+}
+
+func TestConfig_GetFiles(t *testing.T) {
+	type args struct {
+		buf []byte
+	}
+	type wants struct {
+		files []config.File
+	}
+	tests := []struct {
+		name string
+		args args
+		want wants
+	}{
+		{
+			name: "No file",
+			args: args{
+				buf: []byte(`{
+				"settings": {
+					"user": "adam"
+					},
+				"files":[]
+				}`),
+			},
+			want: wants{files: nil},
+		},
+		{
+			name: "Single file without variables",
+			args: args{
+				buf: []byte(`{
+				"settings": {
+					"user": "adam"
+					},
+				"files": [
+				{
+					"name": "first_file",
+					"append": ["single_line"],
+					"remove": ["single_line"]
+				}
+				]}`),
+			},
+			want: wants{files: []config.File{
+				{
+					Name:   "first_file",
+					Append: []string{"single_line"},
+					Remove: []string{"single_line"},
+				},
+			}},
+		},
+		{
+			name: "Single file with variables",
+			args: args{
+				buf: []byte(`{
+				"settings": {
+					"user": "first",
+					"password": "second",
+					"proxy": "third",	
+					"random_key": "random_value"
+					},
+				"files": [
+				{
+					"name": "first_file",
+					"append": ["${user}", "${password}"],
+					"remove": ["${proxy}", "${random_key}"]
+				}
+				]}`),
+			},
+			want: wants{files: []config.File{
+				{
+					Name:   "first_file",
+					Append: []string{"first", "second"},
+					Remove: []string{"third", "random_value"},
+				},
+			}},
+		},
+		{
+			name: "Multiple files with variables",
+			args: args{
+				buf: []byte(`{
+				"settings": {
+					"user": "first",
+					"password": "second",
+					"proxy": "third",	
+					"random_key": "random_value"
+					},
+				"files": [
+				{
+					"name": "first_file",
+					"append": ["${user}", "${password}"],
+					"remove": ["${proxy}", "${random_key}"]
+				},
+				{
+					"name": "second_file",
+					"append": ["value", "2value"],
+					"remove": ["${proxy}", "${user}:${password}:${proxy}"]
+				}
+				]}`),
+			},
+			want: wants{files: []config.File{
+				{
+					Name:   "first_file",
+					Append: []string{"first", "second"},
+					Remove: []string{"third", "random_value"},
+				},
+				{
+					Name:   "second_file",
+					Append: []string{"value", "2value"},
+					Remove: []string{"third", "first:second:third"},
+				},
+			}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, err := config.New(tt.args.buf)
+			if err != nil {
+				t.Errorf("Wrong buf = %v, err = %v", string(tt.args.buf), err)
+				return
+			}
+			if got := c.GetFiles(); !reflect.DeepEqual(got, tt.want.files) {
+				t.Errorf("GetFiles() = %v, want %v", got, tt.want.files)
 			}
 		})
 	}
