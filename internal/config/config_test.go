@@ -23,6 +23,8 @@ func TestNew(t *testing.T) {
 					"password": "pwd",
 					"http_proxy_server": "192.168.0.1",
 					"port": "123"
+				},
+				"files":{
 				}
 			}`)},
 			wantErr: false,
@@ -62,12 +64,16 @@ func TestConfig_Get(t *testing.T) {
 			name: "Just settings",
 			args: args{
 				buf: []byte(`
-				{"settings": {
+				{
+				"settings": {
 					"user": "adam",
 					"password": "pwd",
 					"http_proxy_server": "192.168.0.1",
 					"port": "123"
-				}}`),
+					},
+					"files":{
+					}
+				}`),
 				keys: []string{"user", "password", "http_proxy_server", "port", "ports"},
 			},
 			wants: wants{
@@ -79,13 +85,17 @@ func TestConfig_Get(t *testing.T) {
 			name: "Settings with single variable",
 			args: args{
 				buf: []byte(`
-				{"settings": {
+				{
+				"settings": {
 					"user": "adam",
 					"password": "pwd",
 					"http_proxy_server": "192.168.0.1",
 					"port": "123",
 					"http_proxy": "${user}"
-				}}`),
+					},
+				"files":{
+					}
+				}`),
 				keys: []string{"http_proxy"},
 			},
 			wants: wants{
@@ -97,13 +107,17 @@ func TestConfig_Get(t *testing.T) {
 			name: "Settings with variable - 2 same keys",
 			args: args{
 				buf: []byte(`
-				{"settings": {
+				{
+				"settings": {
 					"user": "adam",
 					"password": "pwd",
 					"http_proxy_server": "192.168.0.1",
 					"port": "123",
 					"http_proxy": "${user}123${user}"
-				}}`),
+					},
+				"files": {
+					}
+				}`),
 				keys: []string{"http_proxy"},
 			},
 			wants: wants{
@@ -115,13 +129,17 @@ func TestConfig_Get(t *testing.T) {
 			name: "Settings with variables - 2 different keys",
 			args: args{
 				buf: []byte(`
-				{"settings": {
+				{	
+				"settings": {
 					"user": "adam",
 					"password": "pwd",
 					"http_proxy_server": "192.168.0.1",
 					"port": "123",
 					"http_proxy": "${user}:${password}"
-				}}`),
+					},
+				"files":{
+					}
+				}`),
 				keys: []string{"http_proxy"},
 			},
 			wants: wants{

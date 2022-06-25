@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	Settings Settings
-	Files    Files `json:"files"`
+	Files    Files
 }
 type Settings struct {
 	Settings map[string]interface{}
@@ -43,6 +43,10 @@ func New(buf []byte) (*Config, error) {
 	if err = json.Unmarshal(jsonMap["settings"], &c.Settings.Settings); err != nil {
 		return nil, err
 	}
+	if err = json.Unmarshal(jsonMap["files"], &c.Files); err != nil {
+		return nil, err
+	}
+
 	c.getValues()
 	c.parse()
 
