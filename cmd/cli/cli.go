@@ -1,13 +1,23 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"proxier/pkg/logger"
 )
 
+type TestJson struct {
+	User     string  `json:"user"`
+	Password *string `json:"password"`
+}
+
 func main() {
-	f := logger.Dummy{}
-	f.Printf("hello world!")
-	fmt.Println("hello world")
+	tmp := `{
+			"user": "adam"
+			}`
+	tst := &TestJson{}
+	if err := json.Unmarshal([]byte(tmp), tst); err != nil {
+		panic(err)
+	}
+	fmt.Println(tst)
 
 }
