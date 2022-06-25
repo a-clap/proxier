@@ -8,16 +8,12 @@ import (
 )
 
 type Config struct {
-	Settings  Settings
-	Variables Variables
-	Files     Files `json:"files"`
+	Settings Settings
+	Files    Files `json:"files"`
 }
 type Settings struct {
 	Settings map[string]interface{}
-}
-
-type Variables struct {
-	Variables map[string]interface{}
+	values   map[string]string
 }
 
 type Files struct {
@@ -40,37 +36,33 @@ func New(buf []byte) (*Config, error) {
 	c := &Config{
 		Settings{
 			Settings: make(map[string]interface{}),
-		},
-		Variables{
-			Variables: make(map[string]interface{}),
+			values:   make(map[string]string),
 		},
 		Files{Files: nil},
 	}
 	if err = json.Unmarshal(jsonMap["settings"], &c.Settings.Settings); err != nil {
-		//	log sth
+		return nil, err
 	}
+	c.getValues()
+	c.parse()
 
-	if err = json.Unmarshal(jsonMap["variables"], &c.Variables.Variables); err != nil {
-
-	} else {
-		c.parseVariables()
-	}
 	return c, nil
 }
 
-func (c *Config) Get(key string) (string, error) {
-	if v, ok := c.Settings.Settings[key]; ok {
-		if s, isString := v.(string); isString {
-			return s, nil
+func (c *Config) getValues() {
+	for key, value := range c.Settings.Settings {
+		if value, ok := value.(string); ok {
+			c.Settings.values[key] = value
 		}
 	}
+}
 
-	if v, ok := c.Variables.Variables[key]; ok {
-		if s, isString := v.(string); isString {
-			return s, nil
-		}
+func (c *Config) Get(key string) (string, error) {
+	if v, ok := c.Settings.values[key]; ok {
+		return v, nil
+	} else {
+		return "", fmt.Errorf("%s doesn't exist", key)
 	}
-	return "", fmt.Errorf("%s doesn't exist", key)
 }
 
 func (c *Config) parseSingleVariable(value string) (newValue string) {
@@ -99,14 +91,14 @@ func (c *Config) parseSingleVariable(value string) (newValue string) {
 	return
 }
 
-func (c *Config) parseVariables() {
+func (c *Config) parse() {
 	var s [][]string
-	for key, variable := range c.Variables.Variables {
-		if v, ok := variable.(string); ok {
-			s = append(s, []string{key, c.parseSingleVariable(v)})
-		}
+
+	for key, v := range c.Settings.values {
+		s = append(s, []string{key, c.parseSingleVariable(v)})
 	}
+
 	for _, value := range s {
-		c.Variables.Variables[value[0]] = value[1]
+		c.Settings.values[value[0]] = value[1]
 	}
 }
