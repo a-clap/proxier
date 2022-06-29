@@ -27,7 +27,6 @@ func (h *Handler) Backup(src, dst string) error {
 	}
 	if srcInfo.IsDir() {
 		return fmt.Errorf(
-
 			"%s is directory", srcInfo.Name())
 	}
 
@@ -59,7 +58,7 @@ func (h *Handler) Backup(src, dst string) error {
 		}
 	}(srcFile)
 
-	var srcBuf []byte
+	srcBuf := make([]byte, srcInfo.Size())
 	b, err := srcFile.Read(srcBuf)
 	if err != nil {
 		return fmt.Errorf("error reading file %s %v", src, err)
