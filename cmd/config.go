@@ -5,8 +5,6 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -14,9 +12,9 @@ import (
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Allows modification of config.json file via cli",
-	Long:  ``,
+	Long:  `Currently supports only creating template config`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("config called")
+
 	},
 }
 

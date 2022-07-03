@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 )
@@ -24,6 +25,45 @@ type File struct {
 	Name   string   `json:"name"`
 	Append []string `json:"append"`
 	Remove []string `json:"remove"`
+}
+
+func Template() []byte {
+	type template struct {
+		Settings map[string]string `json:"settings"`
+		Files    []File            `json:"files"`
+	}
+
+	s := template{
+		Settings: make(map[string]string),
+		Files:    make([]File, 2),
+	}
+	s.Settings["user"] = "user"
+	s.Settings["password"] = "password"
+	s.Settings["server"] = "192.168.0.100"
+	s.Settings["port"] = "80"
+	s.Settings["http_proxy"] = "\"http://${user}:${password}@${server}:${port}\""
+	s.Settings["https_proxy"] = "\"https://${user}:${password}@${server}:${port}\""
+
+	s.Files[0] = File{
+		Name:   "/etc/environment",
+		Append: []string{"HTTP_PROXY=${http_proxy}"},
+		Remove: []string{"HTTP_PROXY"},
+	}
+
+	s.Files[1] = File{
+		Name: "/etc/apt/apt.conf.d/proxy.conf",
+		Append: []string{
+			"Acquire::http::proxy ${http_proxy}",
+			"Acquire::https::proxy ${http_proxy}",
+		},
+		Remove: []string{"Acquire"},
+	}
+
+	buf, err := json.Marshal(s)
+	if err != nil {
+		log.Fatalln("error parsing template config, shouldn't happen")
+	}
+	return buf
 }
 
 func New(buf []byte) (*Config, error) {

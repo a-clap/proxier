@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"github.com/stretchr/testify/require"
 	"proxier/internal/config"
 	"reflect"
 	"testing"
@@ -286,6 +287,55 @@ func TestConfig_GetFiles(t *testing.T) {
 			if got := c.GetFiles(); !reflect.DeepEqual(got, tt.want.files) {
 				t.Errorf("GetFiles() = %v, want %v", got, tt.want.files)
 			}
+		})
+	}
+}
+
+func TestTemplate(t *testing.T) {
+	tests := []struct {
+		name string
+		want []byte
+	}{
+		{
+			name: "Basic config",
+			want: []byte(`
+			{
+				"settings":{
+					"user": "user",
+					"password": "password",
+					"server": "192.168.0.100",
+					"port": "80",
+					"http_proxy": "\"http://${user}:${password}@${server}:${port}\"",
+					"https_proxy": "\"https://${user}:${password}@${server}:${port}\""
+				},
+				"files":[
+				{
+					"name": "/etc/environment",
+					"append": [
+						"HTTP_PROXY=${http_proxy}"	
+					],
+					"remove": [
+						"HTTP_PROXY"
+					]
+				},
+				{	
+					"name": "/etc/apt/apt.conf.d/proxy.conf",
+					"append": [
+						"Acquire::http::proxy ${http_proxy}",
+						"Acquire::https::proxy ${http_proxy}"
+					],
+					"remove": [
+						"Acquire"
+					]
+				}
+				]
+			}`),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := config.Template()
+			require.JSONEq(t, string(got), string(tt.want))
 		})
 	}
 }
