@@ -59,7 +59,7 @@ func Template() []byte {
 		Remove: []string{"Acquire"},
 	}
 
-	buf, err := json.Marshal(s)
+	buf, err := json.MarshalIndent(s, "", "    ")
 	if err != nil {
 		log.Fatalln("error parsing template config, shouldn't happen")
 	}
