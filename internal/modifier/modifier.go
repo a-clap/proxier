@@ -41,15 +41,16 @@ func (m *Modifier) RemoveLines(pattern string) (linesRemoved int, err error) {
 }
 
 func (m *Modifier) AppendLines(lines []string) (linesAppended int) {
+	m.log.Infof("Adding lines %s", lines)
 	m.lines = append(m.lines, lines...)
 	return len(lines)
 }
 
 func (m *Modifier) removeLines(lm lineMatcher) (linesRemoved int, err error) {
 	var removedLines []int
-
 	for i, line := range m.lines {
 		if ok := lm.Match(line); ok {
+			m.log.Infof("Removing line \"%s\"", line)
 			removedLines = append(removedLines, i)
 		}
 	}

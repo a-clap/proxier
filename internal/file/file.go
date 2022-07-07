@@ -75,11 +75,3 @@ func (h *Handler) Backup(src, dst string) error {
 
 	return nil
 }
-
-func (h *Handler) Test(s string) {
-	if _, err := h.fs.Stat(s); err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println("file exists", s)
-	}
-}

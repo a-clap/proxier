@@ -20,7 +20,8 @@ var configCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		template, err := cmd.Flags().GetBool("template")
 		if err != nil {
-			fmt.Println("error parsing template argument", err)
+			_, _ = fmt.Fprintf(os.Stderr, "error parsing template argument %v", err)
+			os.Exit(1)
 		}
 		if template {
 			filename := "template_config.json"
