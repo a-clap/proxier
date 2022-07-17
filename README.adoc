@@ -1,0 +1,88 @@
+= Proxier
+:toc: left
+:toclevels: 3
+
+Simple CLI application to ease the burden of changing proxy settings in files.
+
+== About
+
+I am a little tired of constantly changing proxy settings in Ubuntu files:
+
+. /etc/environment
+. /etc/apt/apt.conf.d/proxy.conf
+
+So, in order to learn GOLang and make something useful - here we have this app.
+
+== Usage
+
+=== Set
+
+=== Unset
+
+== Configuration
+
+It supports configuration via `config.json`
+Will be easier to provide example config, then to explain:
+[source, json]
+----
+{
+    "settings": {
+        "https_proxy": "\"https://${user}:${password}@${server}:${port}\"",
+        "password": "password",
+        "port": "80",
+        "server": "192.168.0.100",
+        "user": "user"
+    },
+    "files": [
+        {
+            "name": "/location/of/file",
+            "append": [
+                "HTTP_PROXY=${http_proxy}"
+            ],
+            "remove": [
+                "HTTP_PROXY"
+            ]
+        },
+        {
+            "name": "/location/of/second/file",
+            "append": [
+                "Acquire::http::proxy ${http_proxy}",
+                "Acquire::https::proxy ${http_proxy}"
+            ],
+            "remove": [
+                "Acquire"
+            ]
+        },
+    ]
+}
+----
+
+There are two main sections `settings` and `files`.
+In `settings` you can provide anything - it doesn't demand any special keys.
+In `files` application expect to have an array of files. Every file need to have:
+
+. name - file to be modified,
+. append - an array of lines, which will be appended to contents of specified file,
+. remove - an array of patterns, which will be removed from contents of specified file
+
+=== Substitution
+
+Config file supports substitution of values with `${name}` syntax.
+If  `${name}` will be found wherever in json, it will get replaced with value of `name` key.
+You can find an example in config above.
+
+=== Template config
+
+You can template config file with command:
+[source, bash]
+----
+go run main.go config --template
+----
+
+
+
+
+
+
+
+

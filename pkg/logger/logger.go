@@ -26,6 +26,10 @@ type Standard struct {
 	*zap.SugaredLogger
 }
 
+func NewDummy() Dummy {
+	return Dummy{}
+}
+
 func NewStandard() Standard {
 	logger, _ := zap.NewDevelopment(zap.IncreaseLevel(zapcore.InfoLevel))
 

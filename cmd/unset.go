@@ -19,16 +19,25 @@ var unsetCmd = &cobra.Command{
 	Short: "Configure files to NOT USE proxy",
 	Long:  `Remove lines from listed files in config.json`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log := logger.NewStandard()
+		var l logger.Logger = logger.NewDummy()
+		if v, err := cmd.Flags().GetBool("verbose"); err != nil {
+			panic(err)
+		} else if v {
+			l = logger.NewStandard()
+		}
 
-		p, err := proxier.New(log)
+		p, err := proxier.New(l)
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "failed to create proxier %v\n", err)
 			os.Exit(1)
 		}
+		fmt.Println("Removing lines...")
 		if err = p.Unset(true); err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "failed to unset %v\n", err)
+			os.Exit(1)
 		}
+		fmt.Println("All good!")
+		os.Exit(0)
 	},
 }
 

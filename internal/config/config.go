@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 )
@@ -37,6 +36,7 @@ func Template() []byte {
 		Settings: make(map[string]string),
 		Files:    make([]File, 2),
 	}
+
 	s.Settings["user"] = "user"
 	s.Settings["password"] = "password"
 	s.Settings["server"] = "192.168.0.100"
@@ -61,8 +61,9 @@ func Template() []byte {
 
 	buf, err := json.MarshalIndent(s, "", "    ")
 	if err != nil {
-		log.Fatalln("error parsing template config, shouldn't happen")
+		panic("error parsing template config, shouldn't happen")
 	}
+	
 	return buf
 }
 
