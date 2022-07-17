@@ -11,14 +11,39 @@ I am a little tired of constantly changing proxy settings in Ubuntu files:
 . /etc/environment
 . /etc/apt/apt.conf.d/proxy.conf
 
-So, in order to learn GOLang and make something useful - here we have this app.
+So, in order to learn GOlang and make something useful - here we have this app.
 
 == Usage
 
-=== Set
+Just call appropriate command to achieve your goal.
+[source, bash]
+----
+If you are lazy bastard, as I am, this application will enable/disable proxy in certain files in Linux.
 
-=== Unset
+What you need to do:
+1. Create config.json (you can create template one with command config --template)
+2. Call application with cmd 'set' (or 'unset').
+By defaults application will create backup files in subdirectory backup/.
 
+Usage:
+  proxier [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  config      Allows modification of config.json file via cli
+  help        Help about any command
+  set         Configure files to use proxy
+  unset       Configure files to NOT USE proxy
+
+Flags:
+  -b, --backup    make backup of files, which will be overridden (default true)
+  -h, --help      help for proxier
+  -v, --verbose   make an application full of logs
+
+Use "proxier [command] --help" for more information about a command.
+
+
+----
 == Configuration
 
 It supports configuration via `config.json`
@@ -71,9 +96,10 @@ Config file supports substitution of values with `${name}` syntax.
 If  `${name}` will be found wherever in json, it will get replaced with value of `name` key.
 You can find an example in config above.
 
-=== Template config
+=== Template configuration file
 
-You can template config file with command:
+You can create template config file with command:
+
 [source, bash]
 ----
 go run main.go config --template
