@@ -2,20 +2,19 @@ package proxier
 
 import (
 	"fmt"
+	"github.com/a-clap/logger"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"proxier/internal/config"
 	"proxier/internal/file"
 	"proxier/internal/modifier"
-	"proxier/pkg/logger"
 	"time"
 )
 
 type Proxier struct {
 	cfg         *config.Config
 	fileHandler file.Handler
-	log         logger.Logger
 }
 type OsFs struct {
 }
@@ -32,7 +31,7 @@ func (o *OsFs) Open(name string) (*os.File, error) {
 
 const CONFIG_FILE = "config.json"
 
-func New(log logger.Logger) (*Proxier, error) {
+func New() (*Proxier, error) {
 	f, err := os.Open(CONFIG_FILE)
 	if err != nil {
 		return nil, fmt.Errorf("error opening config file %v = %v", CONFIG_FILE, err)
@@ -40,7 +39,7 @@ func New(log logger.Logger) (*Proxier, error) {
 	defer func(f *os.File) {
 		err := f.Close()
 		if err != nil {
-			log.Errorf("Error closing %s file = %v\n", CONFIG_FILE, err)
+			logger.Errorf("Error closing %s file = %v\n", CONFIG_FILE, err)
 		}
 	}(f)
 
@@ -57,7 +56,6 @@ func New(log logger.Logger) (*Proxier, error) {
 
 	return &Proxier{cfg: cfg,
 		fileHandler: fileHandler,
-		log:         log,
 	}, nil
 }
 
@@ -69,7 +67,7 @@ func (p *Proxier) Set(backup bool) error {
 	}
 
 	for _, currentFile := range p.cfg.GetFiles() {
-		p.log.Infof("Appending lines to file \"%s\"", currentFile.Name)
+		logger.Infof("Appending lines to file \"%s\"", currentFile.Name)
 		f, err := os.OpenFile(currentFile.Name, os.O_RDWR, os.ModeAppend)
 		if err != nil {
 			return fmt.Errorf("error opening file %v = %v", currentFile.Name, err)
@@ -77,7 +75,7 @@ func (p *Proxier) Set(backup bool) error {
 		defer func(f *os.File) {
 			err := f.Close()
 			if err != nil {
-				p.log.Fatalf("Failed closing file %s, error = %v", currentFile.Name, err)
+				logger.Fatalf("Failed closing file %s, error = %v", currentFile.Name, err)
 			}
 		}(f)
 		data, err := ioutil.ReadAll(f)
@@ -85,7 +83,7 @@ func (p *Proxier) Set(backup bool) error {
 			return fmt.Errorf("error reading file %v = %v", currentFile.Name, err)
 		}
 
-		m := modifier.New(data, p.log)
+		m := modifier.New(data)
 		m.AppendLines(currentFile.Append)
 		_, err = f.WriteAt(m.Get(), 0)
 		if err != nil {
@@ -104,23 +102,25 @@ func (p *Proxier) Unset(backup bool) error {
 	}
 
 	for _, currentFile := range p.cfg.GetFiles() {
-		p.log.Infof("Removing lines from file \"%s\"", currentFile.Name)
+		logger.Infof("Removing lines from file \"%s\"", currentFile.Name)
 		f, err := os.OpenFile(currentFile.Name, os.O_RDWR, os.ModeAppend)
 		if err != nil {
 			return fmt.Errorf("error opening file %v = %v", currentFile.Name, err)
 		}
+
 		defer func(f *os.File) {
 			err := f.Close()
 			if err != nil {
-				p.log.Fatalf("Failed closing file %s, error = %v", currentFile.Name, err)
+				logger.Fatalf("Failed closing file %s, error = %v", currentFile.Name, err)
 			}
 		}(f)
+
 		data, err := ioutil.ReadAll(f)
 		if err != nil {
 			return fmt.Errorf("error reading file %v = %v", currentFile.Name, err)
 		}
 
-		m := modifier.New(data, p.log)
+		m := modifier.New(data)
 		for _, line := range currentFile.Remove {
 			_, err := m.RemoveLines(line)
 			if err != nil {
@@ -155,7 +155,7 @@ func (p *Proxier) backup() error {
 		fileName := filepath.Base(backupFile.Name) + dstName
 
 		if err := p.fileHandler.Backup(backupFile.Name, backupDir+"/"+fileName); err != nil {
-			p.log.Errorf("failed on doing backup of file %v = %v", backupFile.Name, err)
+			logger.Errorf("failed on doing backup of file %v = %v", backupFile.Name, err)
 		}
 	}
 	return nil
