@@ -1,11 +1,16 @@
 package modifier_test
 
 import (
+	"github.com/a-clap/logger"
+	"go.uber.org/zap/zapcore"
 	"proxier/internal/modifier"
-	"proxier/pkg/logger"
 	"reflect"
 	"testing"
 )
+
+func init() {
+	logger.Init(logger.NewDefaultZap(zapcore.DebugLevel))
+}
 
 func TestNew_Get(t *testing.T) {
 	type args struct {
@@ -34,7 +39,7 @@ func TestNew_Get(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := modifier.New(tt.args.buf, logger.Dummy{})
+			m := modifier.New(tt.args.buf)
 			if got := m.Get(); !reflect.DeepEqual(got, tt.args.buf) {
 				t.Errorf("New() = %v, want %v", got, tt.args.buf)
 			}
@@ -84,7 +89,7 @@ func TestModifier_RemoveLines(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := modifier.New(tt.fields.buf, logger.Dummy{})
+			m := modifier.New(tt.fields.buf)
 			gotLinesRemoved, err := m.RemoveLines(tt.args.pattern)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RemoveLines() error = %v, wantErr %v", err, tt.wantErr)
@@ -124,7 +129,7 @@ func TestModifier_AppendLines(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := modifier.New(tt.fields.buf, logger.Dummy{})
+			m := modifier.New(tt.fields.buf)
 			if gotLinesAppended := m.AppendLines(tt.args.lines); gotLinesAppended != tt.wantLinesAppended {
 				t.Errorf("AppendLines() = %v, want %v", gotLinesAppended, tt.wantLinesAppended)
 			}
