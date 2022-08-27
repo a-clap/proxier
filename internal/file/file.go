@@ -3,18 +3,31 @@ package file
 import (
 	"errors"
 	"fmt"
+	"github.com/a-clap/logger"
+	"io"
 	"os"
 )
 
+type File interface {
+	io.Reader
+	io.WriterAt
+	io.Closer
+	Name() string
+}
+
 type FS interface {
 	Stat(name string) (os.FileInfo, error)
-	Create(name string) (*os.File, error)
-	Open(name string) (*os.File, error)
+	Create(name string) (File, error)
+	Open(name string) (File, error)
 }
 
 type Handler struct {
 	fs FS
 }
+
+var (
+	ErrIsDirectory = errors.New("is directory")
+)
 
 func New(fs FS) (Handler, error) {
 	return Handler{fs}, nil
@@ -26,12 +39,11 @@ func (h *Handler) Backup(src, dst string) error {
 		return err
 	}
 	if srcInfo.IsDir() {
-		return fmt.Errorf(
-			"%s is directory", srcInfo.Name())
+		return ErrIsDirectory
 	}
 
 	_, err = h.fs.Stat(dst)
-	if !errors.Is(err, os.ErrNotExist) {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 
@@ -40,10 +52,10 @@ func (h *Handler) Backup(src, dst string) error {
 		return fmt.Errorf("error creating file %v", err)
 	}
 
-	defer func(backupFile *os.File) {
-		err := backupFile.Close()
+	defer func(file File) {
+		err := file.Close()
 		if err != nil {
-
+			logger.Errorf("failed on close file %s", file.Name())
 		}
 	}(backupFile)
 
@@ -51,10 +63,10 @@ func (h *Handler) Backup(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("error opening srcFile %s %v", src, err)
 	}
-	defer func(srcFile *os.File) {
-		err := srcFile.Close()
+	defer func(file File) {
+		err := file.Close()
 		if err != nil {
-
+			logger.Errorf("failed on close file %s", file.Name())
 		}
 	}(srcFile)
 

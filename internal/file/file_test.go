@@ -1,111 +1,222 @@
 package file_test
 
 import (
+	"errors"
+	"github.com/a-clap/logger"
 	"github.com/spf13/afero"
-	"log"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
+	"io/fs"
+	"io/ioutil"
 	"os"
 	"proxier/internal/file"
-	"reflect"
+	"syscall"
 	"testing"
 )
 
-type aferoInterface struct {
-	af afero.Fs
+type mockFs struct {
+	fs afero.Fs
 }
 
-func (a aferoInterface) Stat(name string) (os.FileInfo, error) {
-	return a.af.Stat(name)
+func (m *mockFs) Stat(name string) (os.FileInfo, error) {
+	return m.fs.Stat(name)
 }
-func (a aferoInterface) Create(name string) (*os.File, error) {
-	created, err := a.af.Create(name)
-	return created.(*os.File), err
+
+func (m *mockFs) Open(name string) (file.File, error) {
+	return m.fs.Open(name)
 }
-func (a aferoInterface) Open(name string) (*os.File, error) {
-	opened, err := a.af.Open(name)
-	return opened.(*os.File), err
+
+func (m *mockFs) Create(name string) (file.File, error) {
+	return m.fs.Create(name)
 }
+
+var _ file.FS = &mockFs{afero.NewOsFs()}
 
 func TestHandler_Backup(t *testing.T) {
-
-	inf := aferoInterface{af: afero.NewOsFs()}
-
-	// Create directory and files
-	_ = inf.af.Mkdir("dir.txt", 0755)
-	_ = inf.af.Mkdir("no_permission", 0000)
-	_ = inf.af.Mkdir("permission", 0777)
-	_, _ = inf.af.Create("no_permission/src.txt")
-
-	// Delete previous files
-	_ = inf.af.Remove("permission/src.txt")
-	_ = inf.af.Remove("permission/backup.txt")
-
-	// Create new files
-	src, _ := inf.af.Create("permission/src.txt")
-	data := []byte("very useful data\n")
-	_, _ = src.Write(data)
-	_ = src.Close()
+	logger.Init(logger.NewDefaultZap(zapcore.DebugLevel))
 
 	type fields struct {
-		fs aferoInterface
+		fs mockFs
+	}
+	type dir struct {
+		name string
+		perm os.FileMode
+	}
+	type tmpfile struct {
+		name string
+		data []byte
+	}
+	type prepare struct {
+		dir  dir
+		file tmpfile
 	}
 	type args struct {
 		src, dest string
 	}
 	tests := []struct {
-		name     string
-		fields   fields
-		args     args
-		wantErr  bool
-		wantData []byte
+		name        string
+		fields      fields
+		prepare     []prepare
+		args        args
+		wantErr     bool
+		wantErrType error
+		wantData    []byte
 	}{
 		{
-			name:    "Source file doesn't exists",
-			fields:  fields{inf},
-			args:    args{"not_exist.txt", "backup.txt"},
-			wantErr: true,
+			name:        "Source file doesn't exists",
+			fields:      fields{mockFs{afero.NewOsFs()}},
+			prepare:     nil,
+			args:        args{"not_exist.txt", "backup.txt"},
+			wantErr:     true,
+			wantErrType: &fs.PathError{Op: "stat", Path: "not_exist.txt", Err: syscall.ENOENT},
 		},
 		{
-			name:    "Source file is dir",
-			fields:  fields{inf},
-			args:    args{"dir.txt", "backup.txt"},
-			wantErr: true,
+			name:   "Source file is dir",
+			fields: fields{mockFs{afero.NewOsFs()}},
+			prepare: []prepare{
+				{
+					dir: dir{
+						name: "dir.txt",
+						perm: 0777,
+					},
+					file: tmpfile{
+						name: "",
+						data: nil,
+					},
+				},
+			},
+			args:        args{"dir.txt", "backup.txt"},
+			wantErr:     true,
+			wantErrType: file.ErrIsDirectory,
 		},
 		{
-			name:    "No permission to src file",
-			fields:  fields{inf},
-			args:    args{"no_permission/src.txt", "backup.txt"},
-			wantErr: true,
+			name:   "No permission to src file",
+			fields: fields{mockFs{afero.NewOsFs()}},
+			prepare: []prepare{
+				{
+					dir: dir{
+						name: "no_permission",
+						perm: 0000,
+					},
+					file: tmpfile{
+						name: "no_permission/src.txt",
+						data: nil,
+					},
+				},
+			},
+			args:        args{"no_permission/src.txt", "backup.txt"},
+			wantErr:     true,
+			wantErrType: &fs.PathError{Op: "stat", Path: "no_permission/src.txt", Err: syscall.EACCES},
 		},
 		{
-			name:    "No permission to dst file",
-			fields:  fields{inf},
-			args:    args{"permission/src.txt", "no_permission/backup.txt"},
-			wantErr: true,
+			name:   "No permission to dst file",
+			fields: fields{mockFs{afero.NewOsFs()}},
+			prepare: []prepare{
+				{
+					dir: dir{
+						name: "permission",
+						perm: 0777,
+					},
+					file: tmpfile{
+						name: "permission/src.txt",
+						data: nil,
+					},
+				},
+				{
+					dir: dir{
+						name: "no_permission",
+						perm: 0000,
+					},
+					file: tmpfile{
+						name: "no_permission/backup.txt",
+						data: nil,
+					},
+				},
+			},
+			args:        args{"permission/src.txt", "no_permission/backup.txt"},
+			wantErr:     true,
+			wantErrType: &fs.PathError{Op: "stat", Path: "no_permission/backup.txt", Err: syscall.EACCES},
 		},
 		{
-			name:     "Successful copy",
-			fields:   fields{inf},
+			name:   "Successful copy",
+			fields: fields{mockFs{afero.NewOsFs()}},
+			prepare: []prepare{
+				{
+					dir: dir{
+						name: "permission",
+						perm: 0777,
+					},
+					file: tmpfile{
+						name: "permission/src.txt",
+						data: []byte("some useful data"),
+					},
+				},
+				{
+					dir: dir{
+						name: "",
+						perm: 0000,
+					},
+					file: tmpfile{
+						name: "permission/backup.txt",
+						data: nil,
+					},
+				},
+			},
 			args:     args{"permission/src.txt", "permission/backup.txt"},
 			wantErr:  false,
-			wantData: data,
+			wantData: []byte("some useful data"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h, err := file.New(&tt.fields.fs)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			if err := h.Backup(tt.args.src, tt.args.dest); (err != nil) != tt.wantErr {
-				t.Errorf("Backup() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if !tt.wantErr {
-				backupData, err := afero.ReadFile(inf.af, tt.args.dest)
-				if err != nil {
-					t.Errorf("Not expected error %v", err)
+			require.Nil(t, err)
+
+			for _, elem := range tt.prepare {
+				if len(elem.dir.name) > 0 {
+					if err := tt.fields.fs.fs.Mkdir(elem.dir.name, elem.dir.perm); err != nil {
+						panic(err)
+					}
 				}
-				if !reflect.DeepEqual(backupData, tt.wantData) {
-					t.Errorf("Wrong backup %v, %v", backupData, tt.wantData)
+
+				if len(elem.file.name) > 0 {
+					f, err := tt.fields.fs.fs.Create(elem.file.name)
+					if err != nil {
+						if !errors.Is(err, os.ErrPermission) {
+							panic(err)
+						}
+					}
+
+					if elem.file.data != nil {
+						n, err := f.Write(elem.file.data)
+						if n != len(elem.file.data) || err != nil {
+							panic(err)
+						}
+						_ = f.Close()
+					}
+				}
+			}
+
+			err = h.Backup(tt.args.src, tt.args.dest)
+			if tt.wantErr {
+				assert.NotNil(t, err)
+				assert.Equal(t, tt.wantErrType, err)
+			} else {
+				assert.Nil(t, err)
+				f, err := tt.fields.fs.Open(tt.args.dest)
+				data, err := ioutil.ReadAll(f)
+				assert.Nil(t, err)
+				assert.Equal(t, tt.wantData, data)
+			}
+
+			// Cleanup files
+			for _, elem := range tt.prepare {
+				if len(elem.file.name) > 0 {
+					_ = tt.fields.fs.fs.Remove(elem.file.name)
+				}
+				if len(elem.dir.name) > 0 {
+					_ = tt.fields.fs.fs.RemoveAll(elem.dir.name)
 				}
 			}
 

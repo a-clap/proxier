@@ -22,12 +22,14 @@ type OsFs struct {
 func (o *OsFs) Stat(name string) (os.FileInfo, error) {
 	return os.Stat(name)
 }
-func (o *OsFs) Create(name string) (*os.File, error) {
+func (o *OsFs) Create(name string) (file.File, error) {
 	return os.Create(name)
 }
-func (o *OsFs) Open(name string) (*os.File, error) {
+func (o *OsFs) Open(name string) (file.File, error) {
 	return os.Open(name)
 }
+
+var _ file.FS = &OsFs{}
 
 const CONFIG_FILE = "config.json"
 

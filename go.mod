@@ -11,6 +11,7 @@ require (
 
 require (
 	github.com/a-clap/logger v0.0.2 // indirect
+	github.com/blang/vfs v1.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
