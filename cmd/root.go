@@ -9,6 +9,9 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
 	"os"
+	"proxier/internal/file"
+	"proxier/internal/modifier"
+	"proxier/internal/proxier"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -33,7 +36,11 @@ func Execute() {
 		} else if v {
 			lvl = zapcore.DebugLevel
 		}
-		logger.Init(logger.NewDefaultZap(lvl))
+		log := logger.NewDefaultZap(lvl)
+		proxier.Logger = log
+		modifier.Logger = log
+		file.Logger = log
+
 	}
 
 	err := rootCmd.Execute()

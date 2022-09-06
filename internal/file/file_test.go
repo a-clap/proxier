@@ -2,11 +2,9 @@ package file_test
 
 import (
 	"errors"
-	"github.com/a-clap/logger"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zapcore"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -34,8 +32,6 @@ func (m *mockFs) Create(name string) (file.File, error) {
 var _ file.FS = &mockFs{afero.NewOsFs()}
 
 func TestHandler_Backup(t *testing.T) {
-	logger.Init(logger.NewDefaultZap(zapcore.DebugLevel))
-
 	type fields struct {
 		fs mockFs
 	}

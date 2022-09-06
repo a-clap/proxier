@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+var Logger logger.Logger = logger.NewNop()
+
 type Proxier struct {
 	cfg         *config.Config
 	fileHandler file.Handler
@@ -41,7 +43,7 @@ func New() (*Proxier, error) {
 	defer func(f *os.File) {
 		err := f.Close()
 		if err != nil {
-			logger.Errorf("Error closing %s file = %v\n", CONFIG_FILE, err)
+			Logger.Errorf("Error closing %s file = %v\n", CONFIG_FILE, err)
 		}
 	}(f)
 
@@ -69,7 +71,7 @@ func (p *Proxier) Set(backup bool) error {
 	}
 
 	for _, currentFile := range p.cfg.GetFiles() {
-		logger.Infof("Appending lines to file \"%s\"", currentFile.Name)
+		Logger.Infof("Appending lines to file \"%s\"", currentFile.Name)
 		f, err := os.OpenFile(currentFile.Name, os.O_RDWR, os.ModeAppend)
 		if err != nil {
 			return fmt.Errorf("error opening file %v = %v", currentFile.Name, err)
@@ -77,7 +79,7 @@ func (p *Proxier) Set(backup bool) error {
 		defer func(f *os.File) {
 			err := f.Close()
 			if err != nil {
-				logger.Fatalf("Failed closing file %s, error = %v", currentFile.Name, err)
+				Logger.Fatalf("Failed closing file %s, error = %v", currentFile.Name, err)
 			}
 		}(f)
 		data, err := ioutil.ReadAll(f)
@@ -104,7 +106,7 @@ func (p *Proxier) Unset(backup bool) error {
 	}
 
 	for _, currentFile := range p.cfg.GetFiles() {
-		logger.Infof("Removing lines from file \"%s\"", currentFile.Name)
+		Logger.Infof("Removing lines from file \"%s\"", currentFile.Name)
 		f, err := os.OpenFile(currentFile.Name, os.O_RDWR, os.ModeAppend)
 		if err != nil {
 			return fmt.Errorf("error opening file %v = %v", currentFile.Name, err)
@@ -113,7 +115,7 @@ func (p *Proxier) Unset(backup bool) error {
 		defer func(f *os.File) {
 			err := f.Close()
 			if err != nil {
-				logger.Fatalf("Failed closing file %s, error = %v", currentFile.Name, err)
+				Logger.Fatalf("Failed closing file %s, error = %v", currentFile.Name, err)
 			}
 		}(f)
 
@@ -157,7 +159,7 @@ func (p *Proxier) backup() error {
 		fileName := filepath.Base(backupFile.Name) + dstName
 
 		if err := p.fileHandler.Backup(backupFile.Name, backupDir+"/"+fileName); err != nil {
-			logger.Errorf("failed on doing backup of file %v = %v", backupFile.Name, err)
+			Logger.Errorf("failed on doing backup of file %v = %v", backupFile.Name, err)
 		}
 	}
 	return nil

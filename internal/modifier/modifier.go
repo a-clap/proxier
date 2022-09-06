@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+var Logger logger.Logger = logger.NewNop()
+
 type Modifier struct {
 	lines []string
 }
@@ -29,7 +31,7 @@ func (m *Modifier) RemoveLines(pattern string) (linesRemoved int, err error) {
 	r, err := regexp.Compile(pattern)
 	var lm lineMatcher
 	if err != nil {
-		logger.Debugf("Pattern not compiled, trying with exact string %s", pattern)
+		Logger.Debugf("Pattern not compiled, trying with exact string %s", pattern)
 		lm = &regexMatcher{r}
 	} else {
 		lm = &stringsMatcher{p: pattern}
@@ -39,7 +41,7 @@ func (m *Modifier) RemoveLines(pattern string) (linesRemoved int, err error) {
 }
 
 func (m *Modifier) AppendLines(lines []string) (linesAppended int) {
-	logger.Infof("Adding lines %s", lines)
+	Logger.Infof("Adding lines %s", lines)
 	m.lines = append(m.lines, lines...)
 	return len(lines)
 }
@@ -48,7 +50,7 @@ func (m *Modifier) removeLines(lm lineMatcher) (linesRemoved int, err error) {
 	var removedLines []int
 	for i, line := range m.lines {
 		if ok := lm.Match(line); ok {
-			logger.Infof("Removing line \"%s\"", line)
+			Logger.Infof("Removing line \"%s\"", line)
 			removedLines = append(removedLines, i)
 		}
 	}

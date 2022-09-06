@@ -1,16 +1,10 @@
 package modifier_test
 
 import (
-	"github.com/a-clap/logger"
-	"go.uber.org/zap/zapcore"
 	"proxier/internal/modifier"
 	"reflect"
 	"testing"
 )
-
-func init() {
-	logger.Init(logger.NewDefaultZap(zapcore.DebugLevel))
-}
 
 func TestNew_Get(t *testing.T) {
 	type args struct {

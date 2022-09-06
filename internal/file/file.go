@@ -8,6 +8,8 @@ import (
 	"os"
 )
 
+var Logger logger.Logger = logger.NewNop()
+
 type File interface {
 	io.Reader
 	io.WriterAt
@@ -55,7 +57,7 @@ func (h *Handler) Backup(src, dst string) error {
 	defer func(file File) {
 		err := file.Close()
 		if err != nil {
-			logger.Errorf("failed on close file %s", file.Name())
+			Logger.Errorf("failed on close file %s", file.Name())
 		}
 	}(backupFile)
 
@@ -66,7 +68,7 @@ func (h *Handler) Backup(src, dst string) error {
 	defer func(file File) {
 		err := file.Close()
 		if err != nil {
-			logger.Errorf("failed on close file %s", file.Name())
+			Logger.Errorf("failed on close file %s", file.Name())
 		}
 	}(srcFile)
 
